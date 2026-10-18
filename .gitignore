@@ -59,6 +59,9 @@
 !/tests/TrackingReference/
 !/tests/TrackingReference/*.cs
 !/tests/TrackingReference/*.csproj
+!/tests/WatcherCamera/
+!/tests/WatcherCamera/*.cs
+!/tests/WatcherCamera/*.csproj
 !/tests/WorldPointer/
 !/tests/WorldPointer/*.cs
 !/tests/WorldPointer/*.csproj

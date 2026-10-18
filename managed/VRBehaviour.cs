@@ -37,6 +37,7 @@ namespace AmanatsuLocationVR
         SubtitlePresentation subtitles;
         PovxCompatibility povx;
         PovHeadVisibility headVisibility;
+        WatcherCameraCompatibility watcherCamera;
         WorldPointer worldPointer;
         VrSettingsMenu settingsMenu;
         AnimationState animationState;
@@ -76,6 +77,7 @@ namespace AmanatsuLocationVR
             subtitles = new SubtitlePresentation(P.Log);
             povx = new PovxCompatibility(P.Log);
             headVisibility = new PovHeadVisibility(P.Log);
+            watcherCamera = new WatcherCameraCompatibility(P.Log);
             worldPointer = new WorldPointer(P.Log);
             animationState = new AnimationState(P.Log);
             cameraFrame = new CameraFrame(P.Log);
@@ -191,6 +193,7 @@ namespace AmanatsuLocationVR
                     if (candidate != source)
                     {
                         source = candidate;
+                        watcherCamera?.Deactivate();
                         frameReady = false;
                         cameraFrame.Reset();
                         P.Log.LogInfo(source ? "Following camera: " + CameraPath(source) : "Waiting for an active scene camera.");
@@ -202,6 +205,7 @@ namespace AmanatsuLocationVR
                 if (!running)
                 {
                     sceneHud?.Disable();
+                    watcherCamera?.Deactivate();
                     SetEyesEnabled(false);
                     if (wasRunning) ClearEyeTextures();
                     PrepareUi();
@@ -539,6 +543,8 @@ namespace AmanatsuLocationVR
                 eye.ResetWorldToCameraMatrix();
                 eye.ResetCullingMatrix();
             }
+            watcherCamera?.SetPose(source, (eyes[0].transform.position + eyes[1].transform.position) * .5f,
+                baseRotation * headRotation);
         }
 
         [HideFromIl2Cpp]
@@ -773,6 +779,7 @@ namespace AmanatsuLocationVR
         void StopVR()
         {
             running = false;
+            watcherCamera?.Deactivate();
             cameraFrame?.Reset();
             tracking.Reset();
             wasPositionPinned = false;
@@ -830,6 +837,7 @@ namespace AmanatsuLocationVR
             subtitles?.Dispose();
             povx?.Dispose();
             headVisibility?.Dispose();
+            watcherCamera?.Dispose();
             worldPointer?.Dispose();
             settingsMenu?.Dispose();
             animationState?.Dispose();

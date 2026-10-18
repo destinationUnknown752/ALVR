@@ -1,6 +1,6 @@
 # ALVR
 
-Version 0.1.2 — VR support for **Amanatsu Location** with headset tracking, stereo rendering, character POV, a configurable menu HUD and subtitles. Use the game's keyboard and mouse controls; VR controller input is not supported.
+Version 0.1.3 — VR support for **Amanatsu Location** with headset tracking, stereo rendering, character POV, a configurable menu HUD and subtitles. Use the game's keyboard and mouse controls; VR controller input is not supported.
 
 ## Requirements
 
@@ -47,6 +47,8 @@ If the selected POV character becomes unavailable, the view temporarily returns 
 ## Known issues
 
 The selection pointer can be slightly offset, making characters difficult to select. Move the camera closer to the character to make selecting and talking to her easier.
+
+When AL_HWatchers is installed, its character placement and camera avoidance use the tracked VR view, including character POV and detached views.
 
 ## Settings
 
