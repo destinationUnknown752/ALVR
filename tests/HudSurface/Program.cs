@@ -1,0 +1,63 @@
+using AmanatsuLocationVR;
+using UnityEngine;
+using UnityEngine.Rendering;
+using BepInEx.Logging;
+int checks=0; void Check(bool yes,string message){++checks;if(!yes)throw new Exception(message);}
+bool Close(float a,float b)=>Math.Abs(a-b)<.00002f;
+Check(HudSurfaceMath.TryLocalPoint(0,0,2,1,2,.2f,0,out var p)&&Close(p.x,-1)&&Close(p.y,-.3f)&&Close(p.z,1),"Flat lower left geometry.");
+Check(HudSurfaceMath.TryLocalPoint(1,1,2,1,2,.2f,0,out p)&&Close(p.x,1)&&Close(p.y,.7f)&&Close(p.z,1),"Flat upper right geometry.");
+Check(HudSurfaceMath.TryLocalPoint(.5f,.5f,2,1,2,.2f,1,out p)&&Close(p.x,0)&&Close(p.y,.2f)&&Close(p.z,1),"Curving moved the centre.");
+Check(HudSurfaceMath.TryLocalPoint(0,.5f,2,1,2,0,1,out p)&&Close(p.x,-2/MathF.PI)&&Close(p.z,1-2/MathF.PI),"180 degree cylinder edge.");
+Check(HudSurfaceMath.ScreenToSurfaceV(.3f,true)==.3f&&Close(HudSurfaceMath.ScreenToSurfaceV(.3f,false),.7f),"Screen/texture flip convention.");
+foreach(float bad in new[]{float.NaN,float.PositiveInfinity,-1f,2f}) Check(!HudSurfaceMath.TryLocalPoint(bad,.5f,2,1,2,0,0,out _),"Invalid U accepted.");
+Check(!HudSurfaceMath.TryLocalPoint(.5f,.5f,0,1,2,0,0,out _),"Zero width accepted.");
+Check(!HudSurfaceMath.TryLocalPoint(.5f,.5f,2,0,2,0,0,out _),"Zero distance accepted.");
+Check(!HudSurfaceMath.TryLocalPoint(.5f,.5f,2,1,0,0,0,out _),"Zero aspect accepted.");
+Check(!HudSurfaceMath.TryLocalPoint(.5f,.5f,2,1,2,0,1.1f,out _),"Invalid curvature accepted.");
+var left=new GameObject("Left").AddComponent<Camera>();left.cullingMask=1;
+var right=new GameObject("Right").AddComponent<Camera>();right.cullingMask=-1;
+var game=new GameObject("Game").AddComponent<Camera>();game.cullingMask=7;
+var obstacle=new GameObject("World reserved layer").AddComponent<MeshRenderer>();obstacle.gameObject.layer=31;
+UiHud.ReservePresentationLayer(30);
+var texture=new RenderTexture();
+using var surface=new SceneHudSurface(new ManualLogSource());
+bool Prepare(float curvature=0,bool flip=true,float width=1.4f)=>surface.Prepare(texture,left,right,new Vector3(3,4,5),Quaternion.identity,2,width,.6f,1.6f,.1f,curvature,flip,true);
+Check(Prepare(),"Scene HUD prepare failed.");
+var renderer=UnityEngine.Object.All.OfType<MeshRenderer>().Single(x=>x!=obstacle&&x.Alive);
+var material=renderer.sharedMaterial;var mesh=UnityEngine.Object.All.OfType<Mesh>().Single(x=>x.Alive);
+Check(surface.Active&&!renderer.enabled,"HUD must be ready but hidden outside eye rendering.");
+Check(renderer.gameObject.layer==29,"Scene HUD reused a UI/world reserved layer.");
+Check(left.cullingMask==(1|(1<<29))&&right.cullingMask==-1&&game.cullingMask==7,"Only missing eye layer bit should be added.");
+Check(renderer.transform.position==new Vector3(3,4,5)&&renderer.transform.localScale==new Vector3(2,2,2),"Camera frame/unit transform not applied.");
+Check((float)material.Values["_SrcBlend"]==1&&(float)material.Values["_DstBlend"]==10&&(float)material.Values["_ZWrite"]==0,"Premultiplied alpha or no depth-write state is incorrect.");
+Check(material.Keywords.Contains("_SURFACE_TYPE_TRANSPARENT")&&!material.Passes["DepthOnly"]&&!material.Passes["ShadowCaster"],"Transparent/depth-only state incorrect.");
+Check(mesh.vertices.Length==130&&mesh.triangles.Length==384,"Unexpected surface tessellation.");
+RenderPipelineManager.RenderBegin(game);Check(!renderer.enabled,"Game camera could see HUD.");
+RenderPipelineManager.RenderBegin(left);Check(renderer.enabled,"Left eye cannot see HUD.");
+RenderPipelineManager.RenderEnd(left);Check(!renderer.enabled,"HUD remained visible after eye rendering.");
+RenderPipelineManager.RenderBegin(right);Check(renderer.enabled,"Right eye cannot see HUD.");
+RenderPipelineManager.RenderBegin(game);Check(!renderer.enabled,"Interleaved non-eye camera could see HUD.");
+int rebuilds=mesh.Rebuilds;Check(Prepare()&&mesh.Rebuilds==rebuilds,"Unchanged frame rebuilt mesh.");
+Check(RenderPipelineManager.Begin.Count==1&&RenderPipelineManager.End.Count==1,"Frame updates duplicated callbacks.");
+foreach(float curve in new[]{0f,.25f,.75f,1f}) {
+ Check(Prepare(curve),"Curved prepare failed.");
+ foreach(float u in new[]{0f,.013f,.12f,.499f,.5f,.811f,.999f,1f}) foreach(float v in new[]{0f,.2f,.7f,1f}) {
+  Check(HudSurfaceMath.TryLocalPoint(u,v,1.4f,.6f,1.6f,.1f,curve,out p),"Geometry rejected valid point.");
+  float f=u*64;int i=Math.Min(63,(int)f);float t=f-i;
+  var a=mesh.vertices[i*2];var b=mesh.vertices[(i+1)*2];var top=mesh.vertices[i*2+1];
+  Check(Close(p.x,a.x+(b.x-a.x)*t)&&Close(p.y,a.y+(top.y-a.y)*v)&&Close(p.z,a.z+(b.z-a.z)*t),"Pointer point differs from actual triangle surface.");
+ }
+}
+Check(Prepare(.5f,false)&&mesh.uv[0].y==1&&mesh.uv[1].y==0,"Texture flip did not match pointer mapping.");
+left.cullingMask|=8;surface.Disable();
+Check(!surface.Active&&!renderer.enabled&&left.cullingMask==9&&right.cullingMask==-1,"Disable failed mask restoration or clobbered other bits.");
+Check((UiHud.ReservedLayerMask&(1u<<29))==0&&(UiHud.ReservedLayerMask&(1u<<30))!=0,"Disable released wrong layer owner.");
+Check(material.Values["_BaseMap"]==null,"Disabled HUD retained source texture.");
+Check(Prepare()&&surface.Active,"Re-enabling scene HUD failed.");
+texture.Created=false;Check(!Prepare()&&!surface.Active&&left.cullingMask==9,"Missing capture did not fail safely.");texture.Created=true;
+surface.Dispose();Check(RenderPipelineManager.Begin.Count==0&&RenderPipelineManager.End.Count==0&&!renderer.Alive&&!mesh.Alive&&!material.Alive,"Dispose leaked callbacks or render resources.");
+Check(!Prepare(),"Disposed surface became active.");
+Shader.Available=false;using var missing=new SceneHudSurface(new ManualLogSource());
+Check(!missing.Prepare(texture,left,right,Vector3.zero,Quaternion.identity,1,1,.6f,1,0,0,true,true)&&!missing.Active&&left.cullingMask==9,"Missing shader did not safely fall back.");
+Check(RenderPipelineManager.Begin.Count==0,"Missing shader registered render callback.");
+Console.WriteLine($"PASS: {checks} scene HUD geometry, exact mesh/pointer correspondence, eye-only visibility, material, masks, fallback and cleanup assertions.");

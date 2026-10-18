@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <EmbedAllSources>false</EmbedAllSources>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <EnableSourceLink>false</EnableSourceLink>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <PathMap>$(MSBuildThisFileDirectory)=/_/ALVR/</PathMap>
+    <Authors>destinationUnknown</Authors>
+    <Company>ALVR</Company>
+    <Copyright>Copyright (c) 2026 ALVR contributors</Copyright>
+  </PropertyGroup>
+</Project>
