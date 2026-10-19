@@ -80,7 +80,7 @@ namespace AmanatsuLocationVR
         {
             var original = scene.MainCamera;
             var owner = current;
-            return owner != null && owner.active && owner.proxy && original == owner.source ? owner.proxy : original;
+            return owner != null && owner.active && owner.proxy && original && owner.source && original == owner.source ? owner.proxy : original;
         }
 
         public void SetPose(Camera gameCamera, Vector3 position, Quaternion rotation)

@@ -1,6 +1,6 @@
 # ALVR
 
-Version 0.1.4 — VR support for **Amanatsu Location** with headset tracking, stereo rendering, character POV, a configurable menu HUD and subtitles. Use the game's keyboard and mouse controls; VR controller input is not supported.
+Version 0.1.5 — VR support for **Amanatsu Location** with headset tracking, stereo rendering, character POV, a configurable menu HUD and subtitles. Use the game's keyboard and mouse controls; VR controller input is not supported.
 
 ## Requirements
 

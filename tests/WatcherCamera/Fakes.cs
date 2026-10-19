@@ -18,7 +18,18 @@ namespace UnityEngine
         public static readonly List<Object> All = new();
         public bool Alive = true;
         public Object() { All.Add(this); }
-        public static implicit operator bool(Object value) => value != null && value.Alive;
+        public static implicit operator bool(Object value) => !ReferenceEquals(value, null) && value.Alive;
+        public static bool operator ==(Object left, Object right)
+        {
+            bool leftNull = ReferenceEquals(left, null), rightNull = ReferenceEquals(right, null);
+            if (leftNull && rightNull) return true;
+            if (leftNull) return !right.Alive;
+            if (rightNull) return !left.Alive;
+            return ReferenceEquals(left, right);
+        }
+        public static bool operator !=(Object left, Object right) => !(left == right);
+        public override bool Equals(object value) => value is Object other ? this == other : ReferenceEquals(value, null) && !Alive;
+        public override int GetHashCode() => base.GetHashCode();
         public static void DontDestroyOnLoad(Object value) { }
         public static void Destroy(Object value)
         {

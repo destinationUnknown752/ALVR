@@ -6,7 +6,7 @@ using BepInEx.Unity.IL2CPP;
 
 namespace AmanatsuLocationVR
 {
-    [BepInPlugin(Id, "Amanatsu Location VR", "0.1.4")]
+    [BepInPlugin(Id, "Amanatsu Location VR", "0.1.5")]
     [BepInProcess("AmanatsuLocation.exe")]
     public sealed class Plugin : BasePlugin
     {

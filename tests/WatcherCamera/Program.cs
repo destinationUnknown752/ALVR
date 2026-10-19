@@ -53,6 +53,39 @@ helper.Dispose();
 helper.SetPose(source, position, rotation);
 Check(Harmony.Patched.Count == 0 && !proxy, "Disposed compatibility must not reactivate.");
 
+using (var transition = new WatcherCameraCompatibility(new ManualLogSource()))
+{
+    transition.Install(typeof(WatchersFixture));
+    var original = new GameObject("TransitionSource").AddComponent<Camera>();
+    var transitionScene = new HScene { MainCamera = original };
+    transition.SetPose(original, position, rotation);
+    var transitionProxy = WatcherCameraCompatibility.ResolveCamera(transitionScene);
+    Check(transitionProxy != original, "Live transition source must use its tracked proxy.");
+    UObject.Destroy(original.gameObject);
+    Check(original == null && !original, "Destroyed camera must model Unity null equality and truthiness.");
+    transitionScene.MainCamera = null;
+    foreach (var replacement in Harmony.Patched.Values)
+        Check(ReferenceEquals(replacement(transitionScene), null), "Destroyed saved source must preserve a native null camera getter.");
+    transitionScene.MainCamera = original;
+    foreach (var replacement in Harmony.Patched.Values)
+        Check(ReferenceEquals(replacement(transitionScene), original), "Destroyed original getter must retain the exact stock fallback.");
+    var replacementCamera = new GameObject("ReplacementSource").AddComponent<Camera>();
+    transitionScene.MainCamera = replacementCamera;
+    foreach (var replacement in Harmony.Patched.Values)
+        Check(replacement(transitionScene) == replacementCamera, "New camera must remain stock until its tracked pose is supplied.");
+    transition.SetPose(replacementCamera, nextPosition, rotation);
+    foreach (var replacement in Harmony.Patched.Values)
+        Check(replacement(transitionScene) == transitionProxy, "Replacement camera must resume the existing tracked proxy.");
+    Check(transitionProxy.transform.position.Equals(nextPosition), "Replacement camera recovery must refresh the proxy pose.");
+    transition.Deactivate();
+    foreach (var replacement in Harmony.Patched.Values)
+        Check(replacement(transitionScene) == replacementCamera, "Deactivation after replacement must retain the new stock camera.");
+    transition.SetPose(replacementCamera, position, rotation);
+    transition.SetPose(null, position, rotation);
+    foreach (var replacement in Harmony.Patched.Values)
+        Check(replacement(transitionScene) == replacementCamera, "Losing the replacement camera must release proxy substitution.");
+}
+
 var transpiler = typeof(WatcherCameraCompatibility).GetMethod("UseVrCamera", BindingFlags.NonPublic | BindingFlags.Static);
 var getter = typeof(HScene).GetProperty(nameof(HScene.MainCamera)).GetGetMethod();
 var resolver = typeof(WatcherCameraCompatibility).GetMethod(nameof(WatcherCameraCompatibility.ResolveCamera), BindingFlags.NonPublic | BindingFlags.Static);
